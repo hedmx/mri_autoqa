@@ -46,39 +46,5 @@ Magnetic Resonance Imaging (MRI) quality is the cornerstone of diagnostic accura
 > **结果说明**：平台成功处理了所有案例，展现了极高的鲁棒性与效率。
 
 
-## 目录 / Table of Contents
-- [快速入门](getting_started.md) - 快速开始指南
-- [安装指南](installation.md) - 设置说明
-- [用户指南](user_guide/) - 完整使用文档
-- [API参考](api_documentation/) - 技术参考
-- [教程](tutorials/) - 逐步指南
-- [示例](examples/) - 实际示例
-- [开发者指南](developer_guide/) - 为贡献者提供
-
-## 快速链接 / Quick Links
-- [系统要求](installation.md#system-requirements) / [System Requirements](installation.md#system-requirements)
-- [基础使用](tutorials/basic_usage.md) / [Basic Usage](tutorials/basic_usage.md)
-- [故障排除](tutorials/troubleshooting.md) / [Troubleshooting](tutorials/troubleshooting.md)
-- [贡献指南](developer_guide/contributing.md) / [Contributing](developer_guide/contributing.md)
-
-## English:
-
-Welcome to the comprehensive documentation for MRI AutoQA, an open-source automated system for medical imaging quality analysis.
-
-## Table of Contents
-- [Getting Started](getting_started.md) - Quick start guide
-- [Installation](installation.md) - Setup instructions
-- [User Guide](user_guide/) - Complete usage documentation
-- [API Reference](api_documentation/) - Technical reference
-- [Tutorials](tutorials/) - Step-by-step guides
-- [Examples](examples/) - Practical examples
-- [Developer Guide](developer_guide/) - For contributors
-
-## Quick Links
-- [System Requirements](installation.md#system-requirements)
-- [Basic Usage](tutorials/basic_usage.md)
-- [Troubleshooting](tutorials/troubleshooting.md)
-- [Contributing](developer_guide/contributing.md)
-
 
 
