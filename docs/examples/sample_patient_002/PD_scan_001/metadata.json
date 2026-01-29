@@ -1,0 +1,67 @@
+{
+  "format_version": "2.0",
+  "generated_date": "2026-01-01T14:42:08.450745",
+  "conversion_tool": "MRI_AutoQA_Converter_v2.2",
+  "patient_info": {
+    "patient_id": "P1959155",
+    "patient_name": "ZHANG SAN",
+    "patient_sex": "F",
+    "patient_age": "035Y"
+  },
+  "study_info": {
+    "study_date": "20251106",
+    "study_time": "134741.114000",
+    "study_description": "HZSDEYY^Joint",
+    "accession_number": "1016207719"
+  },
+  "series_info": {
+    "series_number": "6",
+    "series_description": "pd_tse_fs_cor_p2",
+    "modality": "MR",
+    "protocol_name": "pd_tse_fs_cor_p2"
+  },
+  "acquisition_params": {
+    "field_strength_t": "1.5t",
+    "tr_ms": 2830.0,
+    "te_ms": 33.0,
+    "flip_angle_deg": 157.0,
+    "slice_thickness_mm": 3.0,
+    "pixel_spacing_mm": [
+      0.6640625,
+      0.6640625
+    ],
+    "echo_train_length": 6,
+    "number_of_averages": 1.0
+  },
+  "sequence_info": {
+    "sequence_type": "pd",
+    "sequence_subtype": "fse_tse",
+    "manufacturer_sequence_name": "*qtseR2d1_7"
+  },
+  "parallel_imaging": {
+    "used": true,
+    "acceleration_factor": 2.0,
+    "method": "GRAPPA"
+  },
+  "anatomical_region": "knee",
+  "image_characteristics": {
+    "matrix_size": [
+      256,
+      256
+    ],
+    "num_slices": 224,
+    "bits_allocated": 16,
+    "bits_stored": 12
+  },
+  "quality_flags": {
+    "is_valid": true,
+    "hard_constraint_violations": [],
+    "warnings": [],
+    "confidence_level": "PENDING",
+    "algorithm_route": "standard"
+  },
+  "conversion_info": {
+    "source_dicom_count": 224,
+    "conversion_date": "2026-01-01T14:42:08.451493"
+  }
+}

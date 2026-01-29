@@ -1,0 +1,67 @@
+{
+  "format_version": "2.0",
+  "generated_date": "2026-01-10T20:49:02.610207",
+  "conversion_tool": "MRI_AutoQA_Converter_v2.2",
+  "patient_info": {
+    "patient_id": "P1973918",
+    "patient_name": "LI SI",
+    "patient_sex": "F",
+    "patient_age": "065Y"
+  },
+  "study_info": {
+    "study_date": "20260104",
+    "study_time": "144328",
+    "study_description": "DESC",
+    "accession_number": "1016306010"
+  },
+  "series_info": {
+    "series_number": "501",
+    "series_description": "t2_fse_tra_fs_ACS",
+    "modality": "MR",
+    "protocol_name": "t2_fse_tra_fs_ACS"
+  },
+  "acquisition_params": {
+    "field_strength_t": "3.0t",
+    "tr_ms": 3094.0,
+    "te_ms": 60.12,
+    "flip_angle_deg": 120.0,
+    "slice_thickness_mm": 3.0,
+    "pixel_spacing_mm": [
+      0.370370358,
+      0.370370358
+    ],
+    "echo_train_length": 11,
+    "number_of_averages": 1.3
+  },
+  "sequence_info": {
+    "sequence_type": "t2",
+    "sequence_subtype": "fse_tse",
+    "manufacturer_sequence_name": "fse_acs"
+  },
+  "parallel_imaging": {
+    "used": true,
+    "acceleration_factor": 1.5,
+    "method": "GRAPPA"
+  },
+  "anatomical_region": "knee",
+  "image_characteristics": {
+    "matrix_size": [
+      432,
+      432
+    ],
+    "num_slices": 74,
+    "bits_allocated": 16,
+    "bits_stored": 16
+  },
+  "quality_flags": {
+    "is_valid": true,
+    "hard_constraint_violations": [],
+    "warnings": [],
+    "confidence_level": "PENDING",
+    "algorithm_route": "standard"
+  },
+  "conversion_info": {
+    "source_dicom_count": 74,
+    "conversion_date": "2026-01-10T20:49:02.610830"
+  }
+}

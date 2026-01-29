@@ -1,0 +1,30 @@
+============================================================
+MRI Quality Analysis Summary
+============================================================
+
+Scan ID: HZSDEYY_JOINT_20251106_134741_114000/PD_TSE_FS_COR_P2_0006
+Analysis Date: 2026-01-01T14:57:45.590378
+Patient ID: P1959155
+Scan Name: pd_tse_fs_cor_p2
+
+Acquisition Parameters:
+  Anatomical Region: knee
+  Sequence Type: pd
+  Field Strength: 1.5t
+  Parallel Imaging: Yes
+  Acceleration Factor: 2.0
+
+SNR Results (rayleigh_corrected):
+  SNR Value: 58.8
+  SNR(dB): 35.4
+  SNR Rating: EXCELLENT (Score: 1.00/1.00)
+
+CNR Results: 5.11 (EXCELLENT)
+  Tissue Pair: Central vs Peripheral Region
+  Clinical Significance: Assessing central vs peripheral tissue contrast
+
+Noise Uniformity: POOR
+  Coefficient of Variation: 0.775
+  Assessment: 噪声分布不均匀
+
+Analysis Status: COMPLETED

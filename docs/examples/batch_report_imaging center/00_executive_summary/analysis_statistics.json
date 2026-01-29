@@ -1,0 +1,9 @@
+{
+  "total_scans": 10701,
+  "successful": 10607,
+  "failed": 94,
+  "skipped": 0,
+  "start_time": "2026-01-11 11:19:51.653309",
+  "end_time": "2026-01-12 03:39:49.159416",
+  "duration_seconds": 58797.506107
+}

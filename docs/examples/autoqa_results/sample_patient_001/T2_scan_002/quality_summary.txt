@@ -1,0 +1,30 @@
+============================================================
+MRI Quality Analysis Summary
+============================================================
+
+Scan ID: LI SI_P1973918_144330/t2_fse_tra_fs_ACS_145120_501
+Analysis Date: 2026-01-11T12:58:21.063040
+Patient ID: P1973918
+Scan Name: t2_fse_tra_fs_ACS
+
+Acquisition Parameters:
+  Anatomical Region: knee
+  Sequence Type: t2
+  Field Strength: 3.0t
+  Parallel Imaging: Yes
+  Acceleration Factor: 1.5
+
+SNR Results (rayleigh_corrected):
+  SNR Value: 231.4
+  SNR(dB): 47.3
+  SNR Rating: EXCELLENT (Score: 1.00/1.00)
+
+CNR Results: 45.30 (EXCELLENT)
+  Tissue Pair: Central vs Peripheral Region
+  Clinical Significance: Assessing central vs peripheral tissue contrast
+
+Noise Uniformity: FAIR
+  Coefficient of Variation: 0.544
+  Assessment: 噪声分布一般
+
+Analysis Status: COMPLETED

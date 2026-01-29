@@ -1,0 +1,15 @@
+{
+  "report_info": {
+    "report_id": "AUTOQA-20260111_111858",
+    "timestamp": "20260111_111858",
+    "generated_at": "2026-01-12T03:40:02.265560",
+    "total_scans": 10607,
+    "successful_scans": 10607,
+    "failed_scans": 0
+  },
+  "system_info": {
+    "python_version": "3.9.25 (main, Oct 31 2025, 18:40:52) \n[Clang 16.0.0 (clang-1600.0.26.6)]",
+    "pandas_version": "2.3.3",
+    "numpy_version": "2.0.2"
+  }
+}

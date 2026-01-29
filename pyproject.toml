@@ -1,0 +1,104 @@
+[build-system]
+# 指定构建后端，setuptools 是目前最通用的标准
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# --- 项目基本信息 ---
+name = "MRI_AutoQA"
+version = "1.0.0"
+authors = [
+  { name = "hedmx", email = "3532370@qq.com" }
+]
+maintainers = [
+  { name = "Your Name", email = "your.email@example.com" }
+]
+description = "An Open-Source Automated Quality Assurance System for MRI Scans."
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["MRI", "Medical Imaging", "Quality Assurance", "SNR", "Python", "DICOM", "NIfTI"]
+# 分类器，帮助用户在PyPI上通过标签找到你的项目
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "Topic :: Scientific/Engineering :: Medical Science",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+]
+# Python 版本要求
+requires-python = ">=3.8"
+
+# --- 依赖项 ---
+# 核心依赖：MRI处理和数值计算
+dependencies = [
+    "numpy>=1.21.0",
+    "nibabel>=3.2.0",      # NIfTI 处理
+    "pydicom>=2.3.0",      # DICOM 处理
+    "matplotlib>=3.5.0",   # 可视化绘图
+    "pandas>=1.3.0",       # 数据处理与CSV输出
+    "scipy>=1.7.0",        # 科学计算 (用于统计和算法)
+]
+
+# 可选依赖：方便用户一键安装特定功能
+[project.optional-dependencies]
+# 开发依赖：用于测试和代码格式化
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "black",          # 代码格式化
+    "flake8",         # 代码检查
+    "pre-commit",
+]
+# 文档依赖：如果你使用 Sphinx 等工具生成文档
+doc = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+# --- 应用入口 ---
+# 配置命令行工具。安装后，用户可以在终端直接输入 `mri-autoqa` 命令。
+[project.scripts]
+mri-autoqa = "src.main:main" # 假设你的主程序入口在 src/main.py 的 main() 函数
+# 如果你有单独的CLI文件：
+# mri-autoqa-cli = "src.cli:main"
+
+# --- 项目元数据 ---
+[project.urls]
+Homepage = "https://github.com/hedmx/MRI_AutoQA"
+Repository = "https://github.com/hedmx/MRI_AutoQA"
+Documentation = "https://github.com/hedmx/MRI_AutoQA/docs"
+Changelog = "https://github.com/hedmx/MRI_AutoQA/releases"
+
+# --- 工具配置 ---
+# 1. Black (代码格式化工具)
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # 你可以在这里添加不需要格式化的目录
+  # migrations
+  # venv
+)/
+'''
+
+# 2. Flake8 (代码质量检查)
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+
+# 3. pytest (测试配置)
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v -s --tb=short --no-header --no-summary"
