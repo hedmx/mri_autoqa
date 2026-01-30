@@ -63,11 +63,7 @@ Magnetic Resonance Imaging (MRI) quality is the cornerstone of diagnostic accura
 - [API 参考](docs/api_documentation/) - 接口技术参考
 - [开发者指南](docs/developer_guide/) - 为贡献者提供
 - [贡献指南](docs/developer_guide/contributing.md) - 参与开发与提交指南
-<<<<<<< HEAD
 - [版本说明](changelog.md) - 版本更新记录
-=======
-- [版本说明](CHANGELOG.md) - 版本更新记录
->>>>>>> bad1f766b05c174985bbb75c64e2294e9a772ba7
 
 ---
 
