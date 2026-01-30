@@ -82,15 +82,9 @@ Magnetic Resonance Imaging (MRI) quality is the cornerstone of diagnostic accura
 - [故障排除](docs/tutorials/troubleshooting.md) / [Troubleshooting](docs/tutorials/troubleshooting.md)
 
 ### 社区
-<<<<<<< HEAD
 - [代码仓库](https://github.com/hedmx/mri-autoqa) / [Repository](https://github.com/hedmx/mri-autoqa)
 - [问题反馈](https://github.com/hedmx/mri-autoqa/issues) / [Issue Tracker](https://github.com/hedmx/mri-autoqa/issues)
 - [讨论区](https://github.com/hedmx/mri-autoqa/discussions) / [Discussions](https://github.com/hedmx/mri-autoqa/discussions)
-=======
-- [代码仓库](https://github.com/your-org/mri-autoqa) / [Repository](https://github.com/your-org/mri-autoqa)
-- [问题反馈](https://github.com/your-org/mri-autoqa/issues) / [Issue Tracker](https://github.com/your-org/mri-autoqa/issues)
-- [讨论区](https://github.com/your-org/mri-autoqa/discussions) / [Discussions](https://github.com/your-org/mri-autoqa/discussions)
->>>>>>> bad1f766b05c174985bbb75c64e2294e9a772ba7
 
 ---
 
@@ -126,11 +120,7 @@ Magnetic Resonance Imaging (MRI) quality is the cornerstone of diagnostic accura
 
 ## Performance Validation
 
-<<<<<<< HEAD
 We have deployed the platform at a local MRI imaging center and conducted validation through DICOM data conversion and batch automated quality analysis on a dataset of **10,607** MRI scans covering various anatomical regions and field strengths.
-=======
-We have deployed the platform at a local MRI imaging center and conducted validation through DICOM data conversion and batch automated quality analysis on a dataset of **10,607** MRI scans covering various anatomical regions and field strengths.
->>>>>>> bad1f766b05c174985bbb75c64e2294e9a772ba7
 
 | Metric | Mean | Median | Processing Speed |
 | :--- | :--- | :--- | :--- |
@@ -157,11 +147,7 @@ We have deployed the platform at a local MRI imaging center and conducted valida
 - [API Reference](docs/api_documentation/) - Technical interface reference
 - [Developer Guide](docs/developer_guide/) - For contributors
 - [Contributing Guide](docs/developer_guide/contributing.md) - Development participation and submission guidelines
-<<<<<<< HEAD
 - [Changelog](changelog.md) - Version history
-=======
-- [Changelog](CHANGELOG.md) - Version history
->>>>>>> bad1f766b05c174985bbb75c64e2294e9a772ba7
 
 ---
 
@@ -176,15 +162,9 @@ We have deployed the platform at a local MRI imaging center and conducted valida
 - [Troubleshooting](docs/tutorials/troubleshooting.md)
 
 ### Community
-<<<<<<< HEAD
 - [Repository](https://github.com/hedmx/mri-autoqa)
 - [Issue Tracker](https://github.com/hedmx/mri-autoqa/issues)
 - [Discussions](https://github.com/hedmx/mri-autoqa/discussions)
-=======
-- [Repository](https://github.com/your-org/mri-autoqa)
-- [Issue Tracker](https://github.com/your-org/mri-autoqa/issues)
-- [Discussions](https://github.com/your-org/mri-autoqa/discussions)
->>>>>>> bad1f766b05c174985bbb75c64e2294e9a772ba7
 
 ---
 
