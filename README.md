@@ -36,7 +36,7 @@ Magnetic Resonance Imaging (MRI) quality is the cornerstone of diagnostic accura
 
 ## 性能验证 / Performance Validation
 
-我们在本地MRI影像中心进行了平台部署，并对覆盖多种解剖部位与场强的 **10,607** 例 MRI 扫描的数据进行了DICOM数据转换与批量自动化质量分析验证。
+我们在本地MRI影像中心进行了平台部署，并对覆盖多种解剖部位与场强的 **10,607** 个 MRI 扫描的数据进行了DICOM数据转换与批量自动化质量分析验证。
 
 | 指标 | 平均值 | 中位数 | 处理速度 |
 | :--- | :--- | :--- | :--- |
