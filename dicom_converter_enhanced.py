@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
 Enhanced DICOM to NIfTI Converter with Standardized Metadata
-Version: 2.2 - Integrated with Advanced Parallel Imaging Detection
+Version: 2.3 - Optimized with Enhanced Metadata Strategy
 优化要点：
 1. 保持代码2的标准化输出结构
 2. 集成代码1的高级并行采集检测和Sequence类型判断
-3. 保持与metadata.json示例完全一致的输出格式
+3. 优化元数据信息数据策略：物理参数、采样技术参数、解剖部位精准信息
+4. 隐私保护：不采集病人姓名
+5. 新增分层解剖信息采集
 """
 
 import os
@@ -29,8 +31,25 @@ try:
         
         # 标准化映射表
         ANATOMICAL_REGION_MAPPING,
+        ANATOMICAL_DETAILED_MAPPING,
         SEQUENCE_TYPE_MAPPING,
+        SEQUENCE_SUBTYPE_MAPPING,
         FIELD_STRENGTH_MAPPING,
+        
+        # 新增：参数提取配置
+        PHYSICAL_PARAMETERS_TO_EXTRACT,
+        SAMPLING_PARAMETERS_TO_EXTRACT,
+        COIL_INFO_FIELDS,
+        VENDOR_INFO_FIELDS,
+        
+        # 并行成像配置
+        PARALLEL_IMAGING_METHOD_MAPPING,
+        VENDOR_PARALLEL_FIELDS,
+        
+        # 质量控制配置
+        PARAMETER_COMPLETENESS_THRESHOLD,
+        CRITICAL_PARAMETER_WEIGHTS,
+        CONFIDENCE_LEVELS,
         
         # 硬约束配置
         HARD_CONSTRAINTS,
@@ -62,7 +81,7 @@ except ImportError as e:
 # ==================== 核心类定义 ====================
 
 class VendorAwareParallelDetector:
-    """厂商感知的Parallel Imaging检测器（从代码1移植，保持原逻辑）"""
+    """厂商感知的Parallel Imaging检测器"""
     
     VENDOR_CONFIGS = {
         'SIEMENS': {
@@ -176,6 +195,10 @@ class VendorAwareParallelDetector:
             VendorAwareParallelDetector._detect_philips(ds, result)
         else:
             VendorAwareParallelDetector._detect_generic(ds, result)
+        
+        # 标准化方法名称
+        if result['technique'] != 'none' and result['technique'] in PARALLEL_IMAGING_METHOD_MAPPING:
+            result['technique'] = PARALLEL_IMAGING_METHOD_MAPPING[result['technique']]
         
         return result
     
@@ -389,7 +412,7 @@ class VendorAwareParallelDetector:
 
 
 class SequenceTypeDetector:
-    """Sequence Type检测器（从代码1移植，但适配标准化输出）"""
+    """Sequence Type检测器（增强版）"""
     
     @staticmethod
     def detect_sequence_type(ds) -> Tuple[str, str]:
@@ -398,23 +421,22 @@ class SequenceTypeDetector:
         
         返回: (sequence_type, sequence_subtype)
         """
-        # 默认值
-        sequence_type = 't1'
-        subtype = 'standard'
-        
         # 从多个字段获取序列描述
         series_desc = str(getattr(ds, 'SeriesDescription', '')).upper()
         protocol_name = str(getattr(ds, 'ProtocolName', '')).upper()
-        combined_text = f"{series_desc} {protocol_name}"
+        manufacturer_seq_name = str(getattr(ds, 'SequenceName', '')).upper()
         
-        # 使用config.py的映射（优先）
+        combined_text = f"{series_desc} {protocol_name} {manufacturer_seq_name}"
+        
+        # 1. 使用config.py的映射（优先）
+        sequence_type = 't1'  # 默认值
         if SEQUENCE_TYPE_MAPPING:
             for dicom_term, standard_key in SEQUENCE_TYPE_MAPPING.items():
                 if dicom_term in combined_text:
                     sequence_type = standard_key
                     break
         
-        # 如果映射未找到，使用TR/TE逻辑判断（从代码1移植）
+        # 2. 如果映射未找到，使用TR/TE逻辑判断
         if sequence_type == 't1':  # 如果还是默认值
             if hasattr(ds, 'EchoTime') and hasattr(ds, 'RepetitionTime'):
                 try:
@@ -428,24 +450,37 @@ class SequenceTypeDetector:
                         sequence_type = 't2'
                     elif te < 30 and tr > 1500:  # PD特征
                         sequence_type = 'pd'
+                    elif te > 80 and tr > 2000:  # FLAIR特征
+                        sequence_type = 'flair'
                 except:
                     pass
         
-        # 确定子类型
-        if 'MPRAGE' in combined_text:
-            subtype = 'mprage'
-        elif 'SPGR' in combined_text:
-            subtype = 'spgr'
-        elif 'FSE' in combined_text or 'TSE' in combined_text:
-            subtype = 'fse_tse'
-        elif 'GRE' in combined_text or 'GR' in combined_text:
-            subtype = 'gre'
+        # 3. 确定子类型
+        subtype = 'standard'
+        if SEQUENCE_SUBTYPE_MAPPING:
+            for dicom_term, standard_subtype in SEQUENCE_SUBTYPE_MAPPING.items():
+                if dicom_term in combined_text:
+                    subtype = standard_subtype
+                    break
+        
+        # 4. 如果没有匹配，使用启发式规则
+        if subtype == 'standard':
+            if 'MPRAGE' in combined_text:
+                subtype = 'mprage'
+            elif 'SPGR' in combined_text:
+                subtype = 'spgr'
+            elif 'FSE' in combined_text or 'TSE' in combined_text:
+                subtype = 'fse_tse'
+            elif 'GRE' in combined_text or 'GR' in combined_text:
+                subtype = 'gre'
+            elif 'HASTE' in combined_text:
+                subtype = 'haste'
         
         return sequence_type, subtype
     
     @staticmethod
     def detect_fat_suppression(ds) -> bool:
-        """检测脂肪抑制（从代码1移植）"""
+        """检测脂肪抑制"""
         # 检查SequenceVariant
         if hasattr(ds, 'SequenceVariant'):
             variant = str(ds.SequenceVariant).upper()
@@ -468,47 +503,181 @@ class SequenceTypeDetector:
 
 
 class AnatomicalRegionStandardizer:
-    """解剖区域标准化器（从代码1移植，但适配标准化输出）"""
+    """解剖区域标准化器（增强版）"""
     
     @staticmethod
-    def standardize(ds: pydicom.Dataset) -> str:
-        """提取并标准化解剖区域"""
-        # 从多个字段获取解剖信息
+    def standardize(ds: pydicom.Dataset) -> Dict[str, Any]:
+        """提取并标准化解剖区域（返回多层结构）"""
+        
+        # 1. 从多个字段获取原始信息
+        body_part = str(getattr(ds, 'BodyPartExamined', '')).upper().strip()
         series_desc = str(getattr(ds, 'SeriesDescription', '')).upper()
         protocol_name = str(getattr(ds, 'ProtocolName', '')).upper()
-        body_part = str(getattr(ds, 'BodyPartExamined', '')).upper()
         
-        combined_text = f"{series_desc} {protocol_name} {body_part}"
+        # 2. 确定标准化区域（使用映射表）
+        standardized_region = 'default'
         
-        # 使用config.py映射（优先）
-        if ANATOMICAL_REGION_MAPPING:
-            for dicom_term, standard_key in ANATOMICAL_REGION_MAPPING.items():
-                if dicom_term in combined_text:
-                    return standard_key
+        # 优先级1: BodyPartExamined
+        if body_part and body_part in ANATOMICAL_REGION_MAPPING:
+            standardized_region = ANATOMICAL_REGION_MAPPING[body_part]
         
-        # 从描述中推断（从代码1移植）
-        desc = str(ds.SeriesDescription if hasattr(ds, 'SeriesDescription') else '').lower()
-        if 'lumbar' in desc or 'lspine' in desc:
-            return 'lumbar'
-        elif 'cervical' in desc or 'cspine' in desc:
-            return 'cervical'
-        elif 'thoracic' in desc or 'tspine' in desc:
-            return 'thoracic'
-        elif 'brain' in desc or 'head' in desc:
-            return 'brain'
-        elif 'knee' in desc:
-            return 'knee'
-        elif 'shoulder' in desc:
-            return 'shoulder'
-        elif 'hip' in desc:
-            return 'hip'
+        # 优先级2: SeriesDescription中的解剖术语
+        if standardized_region == 'default':
+            for term, region in ANATOMICAL_REGION_MAPPING.items():
+                if term != 'UNKNOWN' and term in series_desc:
+                    standardized_region = region
+                    break
         
-        # 默认返回
-        return 'default'
+        # 优先级3: ProtocolName中的解剖术语
+        if standardized_region == 'default':
+            for term, region in ANATOMICAL_REGION_MAPPING.items():
+                if term != 'UNKNOWN' and term in protocol_name:
+                    standardized_region = region
+                    break
+        
+        # 3. 确定详细区域（使用详细映射）
+        detailed_region = 'default'
+        
+        # 从BodyPart推断详细区域
+        if body_part and body_part in ANATOMICAL_DETAILED_MAPPING:
+            detailed_region = ANATOMICAL_DETAILED_MAPPING[body_part]
+        
+        # 如果详细区域还是default，尝试从描述推断
+        if detailed_region == 'default':
+            combined_text = f"{body_part} {series_desc} {protocol_name}"
+            
+            # 检查详细映射表中的所有术语
+            for term, region in ANATOMICAL_DETAILED_MAPPING.items():
+                if term != 'UNKNOWN' and term in combined_text:
+                    detailed_region = region
+                    break
+            
+            # 如果还是没有找到，使用标准化区域
+            if detailed_region == 'default':
+                detailed_region = standardized_region
+        
+        # 4. 确定左右侧（如果适用）
+        laterality = AnatomicalRegionStandardizer._detect_laterality(
+            body_part, series_desc, protocol_name
+        )
+        
+        # 5. 如果检测到左右侧，更新详细区域
+        if laterality != 'bilateral' and detailed_region in ['knee', 'shoulder', 'hip', 'ankle', 'wrist', 'elbow']:
+            detailed_region = f"{detailed_region}_{laterality}"
+        
+        # 6. 获取患者体位
+        patient_position = str(getattr(ds, 'PatientPosition', 'UNKNOWN'))
+        
+        # 7. 获取图像方向信息
+        image_orientation = {
+            'text': str(getattr(ds, 'ImageOrientationText', 'UNKNOWN')),
+            'dicom': list(getattr(ds, 'ImageOrientationPatientDICOM', [])) if hasattr(ds, 'ImageOrientationPatientDICOM') else []
+        }
+        
+        # 8. 计算置信度
+        confidence = AnatomicalRegionStandardizer._calculate_confidence(
+            body_part, series_desc, protocol_name
+        )
+        
+        return {
+            'standardized_region': standardized_region,
+            'detailed_region': detailed_region,
+            'original_body_part': body_part,
+            'laterality': laterality,
+            'patient_position': patient_position,
+            'image_orientation': image_orientation,
+            'confidence': confidence
+        }
+    
+    @staticmethod
+    def _detect_laterality(body_part: str, series_desc: str, protocol_name: str) -> str:
+        """检测左右侧"""
+        combined = f"{body_part} {series_desc} {protocol_name}".upper()
+        
+        # 左/右侧关键词
+        left_indicators = ['LEFT', 'L_', '_L', 'LT', 'LFT', 'SINISTER', 'L ', ' L']
+        right_indicators = ['RIGHT', 'R_', '_R', 'RT', 'RGT', 'DEXTER', 'R ', ' R']
+        bilateral_indicators = ['BILATERAL', 'BOTH', 'BIL', 'B_']
+        
+        # 检查双侧
+        for indicator in bilateral_indicators:
+            if indicator in combined:
+                return 'bilateral'
+        
+        # 检查左侧
+        left_count = sum(1 for indicator in left_indicators if indicator in combined)
+        right_count = sum(1 for indicator in right_indicators if indicator in combined)
+        
+        if left_count > 0 and right_count == 0:
+            return 'left'
+        elif right_count > 0 and left_count == 0:
+            return 'right'
+        elif left_count > 0 and right_count > 0:
+            return 'bilateral'
+        else:
+            return 'unknown'
+    
+    @staticmethod
+    def _calculate_confidence(body_part: str, series_desc: str, protocol_name: str) -> float:
+        """计算解剖区域识别的置信度"""
+        confidence = 0.0
+        
+        # BodyPartExamined明确存在：+0.4
+        if body_part and body_part not in ['UNKNOWN', '', 'NONE']:
+            confidence += 0.4
+        
+        # SeriesDescription包含解剖术语：+0.3
+        has_anatomical_term = False
+        for term in ANATOMICAL_REGION_MAPPING.keys():
+            if term != 'UNKNOWN' and term in series_desc.upper():
+                has_anatomical_term = True
+                break
+        
+        if has_anatomical_term:
+            confidence += 0.3
+        
+        # ProtocolName包含解剖术语：+0.2
+        has_protocol_term = False
+        for term in ANATOMICAL_REGION_MAPPING.keys():
+            if term != 'UNKNOWN' and term in protocol_name.upper():
+                has_protocol_term = True
+                break
+        
+        if has_protocol_term:
+            confidence += 0.2
+        
+        # 左右侧明确：+0.1
+        if AnatomicalRegionStandardizer._detect_laterality(body_part, series_desc, protocol_name) in ['left', 'right']:
+            confidence += 0.1
+        
+        return min(confidence, 1.0)
 
 
-class StandardizedMetadataBuilder:
-    """标准化元数据构建器（使用config.py配置，集成高级检测）"""
+class PrivacyAwarePatientInfoExtractor:
+    """隐私感知的患者信息提取器"""
+    
+    @staticmethod
+    def extract(ds: pydicom.Dataset) -> Dict[str, str]:
+        """提取去隐私化的患者信息"""
+        patient_id = str(getattr(ds, 'PatientID', 'UNKNOWN')).strip()
+        
+        # 生成匿名ID（可选加盐哈希）
+        import hashlib
+        salt = "MEDICAL_ANON_SALT_2024"
+        anonymized_id = hashlib.sha256(f"{patient_id}{salt}".encode()).hexdigest()[:16]
+        
+        return {
+            'patient_id': patient_id,
+            'anonymized_id': f"PT_{patient_id}_ANON",  # 或使用哈希值
+            'patient_sex': str(getattr(ds, 'PatientSex', 'U')).strip(),
+            'patient_age': str(getattr(ds, 'PatientAge', '000Y')).strip(),
+            'patient_weight': str(getattr(ds, 'PatientWeight', 'UNKNOWN')).strip() if hasattr(ds, 'PatientWeight') else 'UNKNOWN'
+            # 注意：不包含PatientName
+        }
+
+
+class OptimizedMetadataBuilder:
+    """优化版元数据构建器"""
     
     @staticmethod
     def build_from_dicom(ds: pydicom.Dataset, dicom_files: List[Path]) -> Dict[str, Any]:
@@ -516,51 +685,36 @@ class StandardizedMetadataBuilder:
         
         metadata = {
             # 版本信息
-            'format_version': VERSION_CONFIG.get('metadata_schema_version', '2.0'),
+            'format_version': VERSION_CONFIG.get('metadata_schema_version', '2.1'),
             'generated_date': datetime.now().isoformat(),
-            'conversion_tool': 'MRI_AutoQA_Converter_v2.2',
+            'conversion_tool': f"MRI_AutoQA_Converter_{VERSION_CONFIG.get('current_version', '2.3')}",
             
-            # 核心信息
-            'patient_info': StandardizedMetadataBuilder._extract_patient_info(ds),
-            'study_info': StandardizedMetadataBuilder._extract_study_info(ds),
-            'series_info': StandardizedMetadataBuilder._extract_series_info(ds),
+            # 核心信息（隐私保护）
+            'patient_info': PrivacyAwarePatientInfoExtractor.extract(ds),
+            'study_info': OptimizedMetadataBuilder._extract_study_info(ds),
+            'series_info': OptimizedMetadataBuilder._extract_series_info(ds),
             
-            # 采集和分析参数
-            'acquisition_params': StandardizedMetadataBuilder._extract_acquisition_params(ds),
-            'sequence_info': StandardizedMetadataBuilder._extract_sequence_info(ds),
-            'parallel_imaging': StandardizedMetadataBuilder._extract_parallel_imaging(ds),
+            # 增强的参数组
+            'acquisition_params': OptimizedMetadataBuilder._extract_acquisition_params(ds),
+            'physical_parameters': OptimizedMetadataBuilder._extract_physical_parameters(ds),
+            'sampling_parameters': OptimizedMetadataBuilder._extract_sampling_parameters(ds),
+            'sequence_info': OptimizedMetadataBuilder._extract_sequence_info(ds),
+            'parallel_imaging': OptimizedMetadataBuilder._extract_parallel_imaging(ds),
             
-            # 解剖和图像信息
-            'anatomical_region': StandardizedMetadataBuilder._extract_anatomical_region(ds),
-            'image_characteristics': StandardizedMetadataBuilder._extract_image_characteristics(ds, dicom_files),
+            # 增强的解剖和图像信息
+            'anatomical_info': AnatomicalRegionStandardizer.standardize(ds),
+            'coil_info': OptimizedMetadataBuilder._extract_coil_info(ds),
+            'vendor_info': OptimizedMetadataBuilder._extract_vendor_info(ds),
+            'image_characteristics': OptimizedMetadataBuilder._extract_image_characteristics(ds, dicom_files),
             
-            # 质量标志（为后续分析准备）
-            'quality_flags': {
-                'is_valid': True,
-                'hard_constraint_violations': [],
-                'warnings': [],
-                'confidence_level': 'PENDING',
-                'algorithm_route': 'standard'
-            },
+            # 质量标志（增强）
+            'quality_flags': OptimizedMetadataBuilder._calculate_quality_flags(ds, dicom_files),
             
             # 转换信息
-            'conversion_info': {
-                'source_dicom_count': len(dicom_files),
-                'conversion_date': datetime.now().isoformat()
-            }
+            'conversion_info': OptimizedMetadataBuilder._extract_conversion_info(dicom_files)
         }
         
         return metadata
-    
-    @staticmethod
-    def _extract_patient_info(ds: pydicom.Dataset) -> Dict[str, str]:
-        """提取患者信息"""
-        return {
-            'patient_id': str(getattr(ds, 'PatientID', 'UNKNOWN')).strip(),
-            'patient_name': str(getattr(ds, 'PatientName', 'UNKNOWN')).strip(),
-            'patient_sex': str(getattr(ds, 'PatientSex', 'U')).strip(),
-            'patient_age': str(getattr(ds, 'PatientAge', '000Y')).strip()
-        }
     
     @staticmethod
     def _extract_study_info(ds: pydicom.Dataset) -> Dict[str, str]:
@@ -569,7 +723,8 @@ class StandardizedMetadataBuilder:
             'study_date': str(getattr(ds, 'StudyDate', 'UNKNOWN')).strip(),
             'study_time': str(getattr(ds, 'StudyTime', 'UNKNOWN')).strip(),
             'study_description': str(getattr(ds, 'StudyDescription', 'UNKNOWN')).strip(),
-            'accession_number': str(getattr(ds, 'AccessionNumber', 'UNKNOWN')).strip()
+            'accession_number': str(getattr(ds, 'AccessionNumber', 'UNKNOWN')).strip(),
+            'referring_physician': str(getattr(ds, 'ReferringPhysicianName', 'UNKNOWN')).strip() if hasattr(ds, 'ReferringPhysicianName') else 'UNKNOWN'
         }
     
     @staticmethod
@@ -579,12 +734,15 @@ class StandardizedMetadataBuilder:
             'series_number': str(getattr(ds, 'SeriesNumber', 'UNKNOWN')).strip(),
             'series_description': str(getattr(ds, 'SeriesDescription', 'UNKNOWN')).strip(),
             'modality': str(getattr(ds, 'Modality', 'MR')).strip(),
-            'protocol_name': str(getattr(ds, 'ProtocolName', 'UNKNOWN')).strip()
+            'protocol_name': str(getattr(ds, 'ProtocolName', 'UNKNOWN')).strip(),
+            'raw_sequence_name': str(getattr(ds, 'SequenceName', 'UNKNOWN')).strip(),
+            'scanning_sequence': str(getattr(ds, 'ScanningSequence', 'UNKNOWN')).strip() if hasattr(ds, 'ScanningSequence') else 'UNKNOWN',
+            'sequence_variant': str(getattr(ds, 'SequenceVariant', 'UNKNOWN')).strip() if hasattr(ds, 'SequenceVariant') else 'UNKNOWN'
         }
     
     @staticmethod
     def _extract_acquisition_params(ds: pydicom.Dataset) -> Dict[str, Any]:
-        """提取采集参数（使用config.py的标准化映射）"""
+        """提取采集参数"""
         # 场强标准化
         field_strength = float(getattr(ds, 'MagneticFieldStrength', 1.5))
         
@@ -592,8 +750,9 @@ class StandardizedMetadataBuilder:
         field_strength_t = '1.5t'  # 默认值
         if FIELD_STRENGTH_MAPPING:
             available_strengths = list(FIELD_STRENGTH_MAPPING.keys())
-            closest_strength = min(available_strengths, key=lambda x: abs(x - field_strength))
-            field_strength_t = FIELD_STRENGTH_MAPPING[closest_strength]
+            if available_strengths:
+                closest_strength = min(available_strengths, key=lambda x: abs(x - field_strength))
+                field_strength_t = FIELD_STRENGTH_MAPPING[closest_strength]
         
         # 像素间距处理
         pixel_spacing = getattr(ds, 'PixelSpacing', [1.0, 1.0])
@@ -604,16 +763,96 @@ class StandardizedMetadataBuilder:
         else:
             pixel_spacing = [1.0, 1.0]
         
+        # 检查脂肪抑制
+        fat_suppressed = SequenceTypeDetector.detect_fat_suppression(ds)
+        
         return {
             'field_strength_t': field_strength_t,
+            'magnetic_field_strength': field_strength,
             'tr_ms': float(getattr(ds, 'RepetitionTime', 0.0)),
             'te_ms': float(getattr(ds, 'EchoTime', 0.0)),
             'flip_angle_deg': float(getattr(ds, 'FlipAngle', 0.0)),
             'slice_thickness_mm': float(getattr(ds, 'SliceThickness', 0.0)),
             'pixel_spacing_mm': pixel_spacing,
             'echo_train_length': int(getattr(ds, 'EchoTrainLength', 1)),
-            'number_of_averages': float(getattr(ds, 'NumberOfAverages', 1.0))
+            'number_of_averages': float(getattr(ds, 'NumberOfAverages', 1.0)),
+            'fat_suppressed': fat_suppressed,
+            'contrast_agent_used': str(getattr(ds, 'ContrastBolusAgent', 'NO')).strip() if hasattr(ds, 'ContrastBolusAgent') else 'UNKNOWN'
         }
+    
+    @staticmethod
+    def _extract_physical_parameters(ds: pydicom.Dataset) -> Dict[str, Any]:
+        """提取物理参数"""
+        params = {}
+        
+        for param_name in PHYSICAL_PARAMETERS_TO_EXTRACT:
+            if hasattr(ds, param_name):
+                try:
+                    value = getattr(ds, param_name)
+                    # 转换为标准格式
+                    key_name = param_name.lower()
+                    if isinstance(value, (list, pydicom.multival.MultiValue)):
+                        params[key_name] = [float(v) for v in value]
+                    elif isinstance(value, (int, float)):
+                        params[key_name] = float(value)
+                    else:
+                        params[key_name] = str(value)
+                except:
+                    params[param_name.lower()] = 'ERROR'
+        
+        # 特殊处理场强和频率（如果在主参数中已提取，这里可以跳过）
+        if 'magnetic_field_strength' not in params and hasattr(ds, 'MagneticFieldStrength'):
+            params['magnetic_field_strength'] = float(ds.MagneticFieldStrength)
+        
+        if 'imaging_frequency' not in params and hasattr(ds, 'ImagingFrequency'):
+            params['imaging_frequency'] = float(ds.ImagingFrequency)
+        
+        # 添加额外的物理参数
+        if hasattr(ds, 'EchoSpacing'):
+            try:
+                params['echo_spacing'] = float(ds.EchoSpacing)
+            except:
+                pass
+        
+        if hasattr(ds, 'TotalScanTime'):
+            try:
+                params['total_scan_time'] = float(ds.TotalScanTime)
+            except:
+                pass
+        
+        return params
+    
+    @staticmethod
+    def _extract_sampling_parameters(ds: pydicom.Dataset) -> Dict[str, Any]:
+        """提取采样参数"""
+        params = {}
+        
+        for param_name in SAMPLING_PARAMETERS_TO_EXTRACT:
+            if hasattr(ds, param_name):
+                try:
+                    value = getattr(ds, param_name)
+                    # 转换为标准格式
+                    key_name = param_name.lower()
+                    if isinstance(value, (list, pydicom.multival.MultiValue)):
+                        params[key_name] = [float(v) for v in value]
+                    elif isinstance(value, (int, float)):
+                        params[key_name] = float(value)
+                    else:
+                        params[key_name] = str(value)
+                except:
+                    params[param_name.lower()] = 'ERROR'
+        
+        # 添加相位编码方向
+        if hasattr(ds, 'InPlanePhaseEncodingDirection'):
+            params['phase_encoding_direction'] = str(ds.InPlanePhaseEncodingDirection)
+        elif hasattr(ds, 'PhaseEncodingDirection'):
+            params['phase_encoding_direction'] = str(ds.PhaseEncodingDirection)
+        
+        # 添加切片编码方向
+        if hasattr(ds, 'SliceEncodingDirection'):
+            params['slice_encoding_direction'] = str(ds.SliceEncodingDirection)
+        
+        return params
     
     @staticmethod
     def _extract_sequence_info(ds: pydicom.Dataset) -> Dict[str, str]:
@@ -624,19 +863,16 @@ class StandardizedMetadataBuilder:
         # 获取Manufacturer Sequence Name
         manufacturer_sequence_name = str(getattr(ds, 'SequenceName', 'UNKNOWN')).strip()
         
-        # 如果SequenceName包含已知信息，可以进一步调整
-        seq_name_upper = manufacturer_sequence_name.upper()
-        if 'T1' in seq_name_upper and sequence_type != 't1':
-            sequence_type = 't1'
-        elif 'T2' in seq_name_upper and sequence_type != 't2':
-            sequence_type = 't2'
-        elif 'PD' in seq_name_upper and sequence_type != 'pd':
-            sequence_type = 'pd'
+        # 获取脉冲序列细节
+        pulse_sequence_details = str(getattr(ds, 'PulseSequenceDetails', 'UNKNOWN')).strip() if hasattr(ds, 'PulseSequenceDetails') else 'UNKNOWN'
         
         return {
             'sequence_type': sequence_type,
             'sequence_subtype': subtype,
-            'manufacturer_sequence_name': manufacturer_sequence_name
+            'manufacturer_sequence_name': manufacturer_sequence_name,
+            'pulse_sequence_details': pulse_sequence_details,
+            'scanning_sequence': str(getattr(ds, 'ScanningSequence', 'UNKNOWN')).strip() if hasattr(ds, 'ScanningSequence') else 'UNKNOWN',
+            'sequence_variant': str(getattr(ds, 'SequenceVariant', 'UNKNOWN')).strip() if hasattr(ds, 'SequenceVariant') else 'UNKNOWN'
         }
     
     @staticmethod
@@ -653,28 +889,179 @@ class StandardizedMetadataBuilder:
         else:
             method = 'NONE'
         
+        # 收集厂商特定信息
+        vendor_specific = {}
+        if parallel_result['vendor'] in VENDOR_PARALLEL_FIELDS:
+            vendor_config = VENDOR_PARALLEL_FIELDS[parallel_result['vendor']]
+            for field in vendor_config.get('standard', []):
+                if hasattr(ds, field):
+                    try:
+                        vendor_specific[field.lower()] = str(getattr(ds, field))
+                    except:
+                        pass
+        
         return {
             'used': parallel_result['is_parallel'],
             'acceleration_factor': float(parallel_result['acceleration_factor']),
-            'method': method
+            'method': method,
+            'vendor': parallel_result['vendor'],
+            'confidence': float(parallel_result['confidence']),
+            'detection_methods': parallel_result['detection_methods'],
+            'vendor_specific': vendor_specific if vendor_specific else {}
         }
     
     @staticmethod
-    def _extract_anatomical_region(ds: pydicom.Dataset) -> str:
-        """提取并标准化解剖区域（集成高级检测）"""
-        return AnatomicalRegionStandardizer.standardize(ds)
+    def _extract_coil_info(ds: pydicom.Dataset) -> Dict[str, Any]:
+        """提取线圈信息"""
+        coil_info = {}
+        
+        for field in COIL_INFO_FIELDS:
+            if hasattr(ds, field):
+                try:
+                    value = getattr(ds, field)
+                    coil_info[field.lower()] = str(value)
+                except:
+                    coil_info[field.lower()] = 'ERROR'
+        
+        return coil_info
+    
+    @staticmethod
+    def _extract_vendor_info(ds: pydicom.Dataset) -> Dict[str, Any]:
+        """提取厂商信息"""
+        vendor_info = {}
+        
+        for field in VENDOR_INFO_FIELDS:
+            if hasattr(ds, field):
+                try:
+                    value = getattr(ds, field)
+                    vendor_info[field.lower()] = str(value)
+                except:
+                    vendor_info[field.lower()] = 'ERROR'
+        
+        # 添加机构地址信息（如果可用）
+        if hasattr(ds, 'InstitutionAddress'):
+            vendor_info['institution_address'] = str(ds.InstitutionAddress)
+        
+        if hasattr(ds, 'InstitutionalDepartmentName'):
+            vendor_info['department_name'] = str(ds.InstitutionalDepartmentName)
+        
+        return vendor_info
     
     @staticmethod
     def _extract_image_characteristics(ds: pydicom.Dataset, dicom_files: List[Path]) -> Dict[str, Any]:
         """提取图像特性"""
+        # 获取图像类型
+        image_type = []
+        if hasattr(ds, 'ImageType'):
+            if isinstance(ds.ImageType, (list, pydicom.multival.MultiValue)):
+                image_type = [str(item) for item in ds.ImageType]
+            else:
+                image_type = [str(ds.ImageType)]
+        
+        # 获取采集类型
+        mr_acquisition_type = str(getattr(ds, 'MRAcquisitionType', 'UNKNOWN'))
+        
+        # 获取比特信息
+        bits_allocated = int(getattr(ds, 'BitsAllocated', 16))
+        bits_stored = int(getattr(ds, 'BitsStored', 12))
+        high_bit = int(getattr(ds, 'HighBit', bits_stored - 1))
+        
+        # 获取像素表示
+        pixel_representation = int(getattr(ds, 'PixelRepresentation', 0))
+        
         return {
             'matrix_size': [
                 int(getattr(ds, 'Rows', 256)),
                 int(getattr(ds, 'Columns', 256))
             ],
             'num_slices': len(dicom_files),
-            'bits_allocated': int(getattr(ds, 'BitsAllocated', 16)),
-            'bits_stored': int(getattr(ds, 'BitsStored', 12))
+            'bits_allocated': bits_allocated,
+            'bits_stored': bits_stored,
+            'high_bit': high_bit,
+            'pixel_representation': pixel_representation,
+            'image_type': image_type,
+            'mr_acquisition_type': mr_acquisition_type,
+            'window_center': float(getattr(ds, 'WindowCenter', 0.0)) if hasattr(ds, 'WindowCenter') else 0.0,
+            'window_width': float(getattr(ds, 'WindowWidth', 0.0)) if hasattr(ds, 'WindowWidth') else 0.0
+        }
+    
+    @staticmethod
+    def _calculate_quality_flags(ds: pydicom.Dataset, dicom_files: List[Path]) -> Dict[str, Any]:
+        """计算质量标志"""
+        # 检查关键参数是否存在
+        critical_params = [
+            'RepetitionTime', 'EchoTime', 'MagneticFieldStrength',
+            'PixelSpacing', 'SliceThickness', 'FlipAngle',
+            'Rows', 'Columns'
+        ]
+        
+        missing_params = []
+        for param in critical_params:
+            if not hasattr(ds, param):
+                missing_params.append(param)
+        
+        # 计算参数完整性
+        total_params = len(critical_params)
+        missing_count = len(missing_params)
+        completeness = 1.0 - (missing_count / total_params) if total_params > 0 else 0.0
+        
+        # 确定置信度等级
+        confidence_level = 'PENDING'
+        for level, threshold in CONFIDENCE_LEVELS.items():
+            if completeness >= threshold:
+                confidence_level = level
+                break
+        
+        # 检查警告条件
+        warnings = []
+        
+        # 检查切片数
+        if len(dicom_files) < 3:
+            warnings.append(f"Low number of slices: {len(dicom_files)}")
+        
+        # 检查矩阵尺寸
+        if hasattr(ds, 'Rows') and hasattr(ds, 'Columns'):
+            rows = int(ds.Rows)
+            cols = int(ds.Columns)
+            if rows < 64 or cols < 64:
+                warnings.append(f"Small matrix size: {rows}x{cols}")
+        
+        # 检查TR/TE合理性
+        if hasattr(ds, 'RepetitionTime') and hasattr(ds, 'EchoTime'):
+            try:
+                tr = float(ds.RepetitionTime)
+                te = float(ds.EchoTime)
+                if tr <= 0 or te <= 0:
+                    warnings.append(f"Invalid TR/TE values: TR={tr}, TE={te}")
+                elif te > tr:
+                    warnings.append(f"TE ({te}) greater than TR ({tr})")
+            except:
+                pass
+        
+        return {
+            'is_valid': completeness >= PARAMETER_COMPLETENESS_THRESHOLD,
+            'hard_constraint_violations': [],
+            'warnings': warnings,
+            'confidence_level': confidence_level,
+            'algorithm_route': 'standard',
+            'parameter_completeness': completeness,
+            'missing_critical_parameters': missing_params
+        }
+    
+    @staticmethod
+    def _extract_conversion_info(dicom_files: List[Path]) -> Dict[str, Any]:
+        """提取转换信息"""
+        # 计算总文件大小
+        total_size = 0
+        for file_path in dicom_files:
+            if file_path.exists():
+                total_size += file_path.stat().st_size
+        
+        return {
+            'source_dicom_count': len(dicom_files),
+            'total_dicom_size_bytes': total_size,
+            'conversion_date': datetime.now().isoformat(),
+            'converter_version': VERSION_CONFIG.get('current_version', '2.3')
         }
 
 
@@ -821,7 +1208,8 @@ class DICOMToNIfTIConverter:
                 'volume_shape': list(volume.shape),
                 'data_type': str(volume.dtype),
                 'file_size_bytes': output_nii_path.stat().st_size if output_nii_path.exists() else 0,
-                'conversion_time': datetime.now().isoformat()
+                'conversion_time': datetime.now().isoformat(),
+                'affine_matrix': affine.tolist() if isinstance(affine, np.ndarray) else affine
             }
             
             return True, None, stats
@@ -896,14 +1284,17 @@ class ConversionLogger:
         
         # 统计信息
         self.stats = {
-            'conversion_version': VERSION_CONFIG.get('current_version', '2.2'),
+            'conversion_version': VERSION_CONFIG.get('current_version', '2.3'),
             'start_time': datetime.now().isoformat(),
             'total_scans_processed': 0,
             'successful_conversions': 0,
             'failed_conversions': 0,
             'skipped_scans': 0,
             'total_processing_time_seconds': 0.0,
-            'hard_constraint_violations': {}
+            'hard_constraint_violations': {},
+            'vendor_distribution': {},
+            'anatomical_region_distribution': {},
+            'sequence_type_distribution': {}
         }
     
     def log_success(self, patient_id: str, scan_name: str, metadata: Dict, 
@@ -914,17 +1305,28 @@ class ConversionLogger:
             'action': 'SUCCESS',
             'patient_id': patient_id,
             'scan_name': scan_name,
-            'anatomical_region': metadata.get('anatomical_region', 'unknown'),
+            'anatomical_region': metadata.get('anatomical_info', {}).get('detailed_region', 'unknown'),
             'sequence_type': metadata.get('sequence_info', {}).get('sequence_type', 'unknown'),
             'parallel_imaging': metadata.get('parallel_imaging', {}).get('used', False),
             'acceleration_factor': metadata.get('parallel_imaging', {}).get('acceleration_factor', 1.0),
             'processing_time_seconds': round(processing_time, 2),
-            'conversion_stats': conversion_stats
+            'conversion_stats': conversion_stats,
+            'confidence_level': metadata.get('quality_flags', {}).get('confidence_level', 'PENDING')
         }
         
         self.log_entries.append(entry)
         self.stats['successful_conversions'] += 1
         self.stats['total_scans_processed'] += 1
+        
+        # 更新分布统计
+        vendor = metadata.get('vendor_info', {}).get('manufacturer', 'UNKNOWN')
+        self.stats['vendor_distribution'][vendor] = self.stats['vendor_distribution'].get(vendor, 0) + 1
+        
+        anat_region = metadata.get('anatomical_info', {}).get('detailed_region', 'unknown')
+        self.stats['anatomical_region_distribution'][anat_region] = self.stats['anatomical_region_distribution'].get(anat_region, 0) + 1
+        
+        seq_type = metadata.get('sequence_info', {}).get('sequence_type', 'unknown')
+        self.stats['sequence_type_distribution'][seq_type] = self.stats['sequence_type_distribution'].get(seq_type, 0) + 1
     
     def log_skip(self, patient_id: str, scan_name: str, violations: List[str], 
                 error_code: str, processing_time: float):
@@ -1123,7 +1525,7 @@ class EnhancedDICOMConverter:
         
         # 统计信息
         self.conversion_stats = {
-            'converter_version': VERSION_CONFIG.get('current_version', '2.2'),
+            'converter_version': VERSION_CONFIG.get('current_version', '2.3'),
             'input_directory': str(self.input_dir),
             'output_directory': str(self.output_dir),
             'start_time': datetime.now().isoformat(),
@@ -1138,7 +1540,9 @@ class EnhancedDICOMConverter:
                 'ge': 0,
                 'philips': 0,
                 'other': 0
-            }
+            },
+            'anatomical_region_stats': {},
+            'sequence_type_stats': {}
         }
         
         if self.verbose:
@@ -1146,19 +1550,15 @@ class EnhancedDICOMConverter:
     
     def convert_all(self) -> Dict[str, Any]:
         """转换所有DICOM目录"""
-        # ==================== 新增：批量转换开始提示 ====================
-        
         print("=" * 70)
         print("🚀 BATCH DICOM TO NIFTI CONVERSION")
         print("=" * 70)
         print("🔄 Conversion in progress...")
         print("-" * 70)
-        # =============================================================
         
         # 1. 扫描DICOM目录
         dicom_dirs = self.scanner.find_dicom_directories()
         self.conversion_stats['total_dicom_dirs_found'] = len(dicom_dirs)
-        
         
         print(f"📊 Found {len(dicom_dirs)} DICOM directories to process")
         
@@ -1167,7 +1567,6 @@ class EnhancedDICOMConverter:
             start_time = datetime.now()
             rel_path = dicom_dir.relative_to(self.input_dir)
             print(f"\n[{dir_idx}/{len(dicom_dirs)}] 🔄 Processing: {rel_path}")
-            # ========================================================
             
             try:
                 # 处理单个DICOM目录
@@ -1189,15 +1588,13 @@ class EnhancedDICOMConverter:
                 self.logger.log_error('UNKNOWN', str(dicom_dir), error_msg, 
                                     ERROR_CODES['CONVERSION_ERROR'], processing_time)
                 
-                
                 print(f"  ❌ Error: {str(e)[:100]}... ({processing_time:.1f}s)")
             
-            # ==================== 新增：进度显示 ====================
-            if  dir_idx % 5 == 0:
+            # 进度显示
+            if dir_idx % 5 == 0:
                 progress = dir_idx / len(dicom_dirs) * 100
                 print(f"\n📈 Progress: {dir_idx}/{len(dicom_dirs)} ({progress:.1f}%)")
                 print("-" * 50)
-            # ====================================================
         
         # 3. 保存日志和生成摘要
         self.logger.save_logs()
@@ -1273,12 +1670,21 @@ class EnhancedDICOMConverter:
             return False
         
         # 5. 构建标准化元数据
-        metadata = StandardizedMetadataBuilder.build_from_dicom(first_ds, dicom_files)
+        metadata = OptimizedMetadataBuilder.build_from_dicom(first_ds, dicom_files)
         
         # 6. 更新统计信息
         vendor = VendorAwareParallelDetector.identify_vendor(first_ds)
         self.conversion_stats['vendor_distribution'][vendor] = self.conversion_stats['vendor_distribution'].get(vendor, 0) + 1
         
+        # 解剖区域统计
+        anat_region = metadata.get('anatomical_info', {}).get('detailed_region', 'unknown')
+        self.conversion_stats['anatomical_region_stats'][anat_region] = self.conversion_stats['anatomical_region_stats'].get(anat_region, 0) + 1
+        
+        # 序列类型统计
+        seq_type = metadata.get('sequence_info', {}).get('sequence_type', 'unknown')
+        self.conversion_stats['sequence_type_stats'][seq_type] = self.conversion_stats['sequence_type_stats'].get(seq_type, 0) + 1
+        
+        # 并行成像统计
         parallel_info = metadata.get('parallel_imaging', {})
         if parallel_info.get('used', False):
             self.conversion_stats['parallel_imaging_stats']['total_parallel_scans'] += 1
@@ -1321,18 +1727,27 @@ class EnhancedDICOMConverter:
         
         if self.verbose:
             # 显示关键信息
-            anatomical_region = metadata.get('anatomical_region', 'unknown')
-            sequence_type = metadata.get('sequence_info', {}).get('sequence_type', 'unknown')
-            matrix_size = metadata.get('image_characteristics', {}).get('matrix_size', [0, 0])
-            num_slices = metadata.get('image_characteristics', {}).get('num_slices', 0)
+            anat_info = metadata.get('anatomical_info', {})
+            detailed_region = anat_info.get('detailed_region', 'unknown')
+            standardized_region = anat_info.get('standardized_region', 'unknown')
+            
+            sequence_info = metadata.get('sequence_info', {})
+            sequence_type = sequence_info.get('sequence_type', 'unknown')
+            sequence_subtype = sequence_info.get('sequence_subtype', 'unknown')
+            
+            image_chars = metadata.get('image_characteristics', {})
+            matrix_size = image_chars.get('matrix_size', [0, 0])
+            num_slices = image_chars.get('num_slices', 0)
+            
             parallel_used = parallel_info.get('used', False)
             
-            print(f"  📍 Region: {anatomical_region}")
-            print(f"  🧬 Sequence: {sequence_type}")
+            print(f"  📍 Region: {detailed_region} ({standardized_region})")
+            print(f"  🧬 Sequence: {sequence_type} ({sequence_subtype})")
             print(f"  📐 Size: {matrix_size[0]}×{matrix_size[1]}×{num_slices}")
             print(f"  ⚡ Parallel Imaging: {'Yes' if parallel_used else 'No'}")
             if parallel_used:
                 print(f"  📊 Acceleration Factor: {parallel_info.get('acceleration_factor', 1.0)}")
+            print(f"  🎯 Confidence: {metadata.get('quality_flags', {}).get('confidence_level', 'PENDING')}")
         
         return True
     
@@ -1341,8 +1756,8 @@ class EnhancedDICOMConverter:
         print("=" * 70)
         print("ENHANCED DICOM TO NIfTI CONVERTER")
         print("=" * 70)
-        print(f"Version: {VERSION_CONFIG.get('current_version', '2.2')}")
-        print(f"Converter Type: Integrated with Advanced Parallel Imaging Detection")
+        print(f"Version: {VERSION_CONFIG.get('current_version', '2.3')}")
+        print(f"Converter Type: Optimized Metadata Strategy")
         print(f"Input directory: {self.input_dir}")
         print(f"Output directory: {self.output_dir}")
         print(f"Log directory: {self.log_dir}")
@@ -1350,9 +1765,6 @@ class EnhancedDICOMConverter:
     
     def _print_summary(self):
         """打印转换摘要"""
-        #if not self.verbose:
-            #return
-        
         print("\n" + "=" * 70)
         print("📊 CONVERSION SUMMARY")
         print("=" * 70)
@@ -1376,6 +1788,20 @@ class EnhancedDICOMConverter:
             print("\nVendor distribution:")
             for vendor, count in sorted(self.conversion_stats['vendor_distribution'].items()):
                 print(f"  {vendor}: {count}")
+        
+        # 解剖区域分布
+        if self.conversion_stats['anatomical_region_stats']:
+            print("\nAnatomical region distribution (top 5):")
+            sorted_regions = sorted(self.conversion_stats['anatomical_region_stats'].items(), 
+                                  key=lambda x: x[1], reverse=True)[:5]
+            for region, count in sorted_regions:
+                print(f"  {region}: {count}")
+        
+        # 序列类型分布
+        if self.conversion_stats['sequence_type_stats']:
+            print("\nSequence type distribution:")
+            for seq_type, count in sorted(self.conversion_stats['sequence_type_stats'].items()):
+                print(f"  {seq_type}: {count}")
         
         # Parallel Imaging统计
         parallel_stats = self.conversion_stats['parallel_imaging_stats']
@@ -1413,7 +1839,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description='Enhanced DICOM to NIfTI Converter with Standardized Metadata',
+        description='Enhanced DICOM to NIfTI Converter with Optimized Metadata Strategy',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Examples:
@@ -1422,9 +1848,12 @@ Examples:
   %(prog)s --input data --output converted_data --log-dir logs
 
 Features:
-  • Standardized metadata output (format_version: 2.0)
+  • Enhanced metadata output (format_version: 2.1)
   • Advanced parallel imaging detection for Siemens, GE, Philips
   • TR/TE-based sequence type detection
+  • Detailed anatomical region mapping (multi-level)
+  • Physical and sampling parameter extraction
+  • Privacy protection (no patient names)
   • Hard constraint validation
 
 Output files:
