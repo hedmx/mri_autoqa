@@ -520,7 +520,7 @@ ROI_SETTINGS = {
         # 动态搜索参数（已验证有效）
         'search_center_y_ratio': 0.6,
         'search_center_x_ratio': 0.5,
-        'search_radius_y_ratio': 0.18,
+        'search_radius_y_ratio': 0.12,
         'search_radius_x_ratio': 0.10,
         
         # 目标组织信号特征（基于数据分析优化）
@@ -529,8 +529,8 @@ ROI_SETTINGS = {
         'max_allowed_cv': 0.25,
         
         # ROI尺寸参数（关键优化）
-        'roi_size_ratio': 0.08,
-        'description': '腰椎椎体松质骨动态搜索（优化尺寸：0.08）',
+        'roi_size_ratio': 0.06,
+        'description': '腰椎椎体松质骨动态搜索（优化尺寸：0.06）',
         
         # 新增：搜索策略引用和固定位置
         'search_strategy_ref': 'UNIFIED_SEARCH_STRATEGY',

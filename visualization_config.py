@@ -32,7 +32,7 @@ class VisualizationConfig:
             'wspace': 0.29,
             'hspace': 0.39,
             'width_ratios': [1, 1, 1],
-            'height_ratios': [1, 1, 1, 0.8],
+            'height_ratios': [1.5, 1, 1, 0.8],
             'top': 0.95,      # 新增：减小顶部间距
             'bottom': 0.07    # 新增：减小底部间距
         }
@@ -110,33 +110,25 @@ class VisualizationConfig:
             'clinical_significance_fontsize': 8
         },
         
-        # 子图4：噪声均匀性
+
+        # 子图4：伪影检测
         4: {
-            'title': 'Noise Uniformity Analysis',
-            'heatmap_cmap': 'viridis',
-            'show_cv': True,
-            'show_rating': True,
-            'boxplot_showfliers': False
-        },
-        
-        # 子图5：伪影检测
-        5: {
             'title': 'Artifact Detection',
             'heatmap_cmap': 'hot',
             'artifact_types': ['Motion', 'Gibbs', 'Wrap-around', 'Chemical Shift'],
             'artifact_score_fontsize': 9
         },
         
-        # 子图6：综合质量评分
-        6: {
+        # 子图5：综合质量评分
+        5: {
             'title': 'Comprehensive Quality Score',
             'radar_angles': np.linspace(0, 2*np.pi, 4, endpoint=False).tolist(),
             'radar_categories': ['ROI Placement', 'Noise Reliability', 'Image Quality', 'Algorithm Execution'],
             'radar_fill_alpha': 0.25
         },
         
-        # 子图7：信号直方图
-        7: {
+        # 子图6：信号直方图
+        6: {
             'title': 'Signal ROI Histogram',
             'bins': 50,
             'show_fit': True,
@@ -145,8 +137,8 @@ class VisualizationConfig:
             'norm_fit_alpha': 0.6
         },
         
-        # 子图8：噪声直方图
-        8: {
+        # 子图7：噪声直方图
+        7: {
             'title': 'Background Noise Histogram',
             'bins': 30,
             'show_reference_lines': True,
@@ -154,8 +146,8 @@ class VisualizationConfig:
             'reference_line_alpha': 0.5
         },
         
-        # 子图9：置信度评估
-        9: {
+        # 子图8：置信度评估
+        8: {
             'title': 'Confidence Assessment',
             'show_four_dimensions': True,
             'show_total_confidence': True,
@@ -163,16 +155,16 @@ class VisualizationConfig:
             'bar_width': 0.7
         },
         
-        # 子图10：评分组件
-        10: {
+        # 子图9：评分组件
+        9: {
             'title': 'Score Components Breakdown',
             'stacked_bar': True,
             'show_weights': True,
             'component_labels': ['Intensity', 'Uniformity', 'Edge Distance', 'Anatomy']
         },
         
-        # 子图11：采集信息
-        11: {
+        # 子图10：采集信息
+        10: {
             'title': 'Acquisition Information',
             'table_rows': 8,
             'table_columns': 2,
@@ -181,8 +173,8 @@ class VisualizationConfig:
             'header_color': '#E3F2FD'
         },
         
-        # 子图12：处理信息
-        12: {
+        # 子图11：处理信息
+        11: {
             'title': 'Processing Information',
             'show_status_icon': True,
             'status_icon_size': 12,

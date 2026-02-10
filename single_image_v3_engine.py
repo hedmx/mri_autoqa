@@ -245,7 +245,7 @@ class SingleImageV3Core:
                 for size_factor in UNIFIED_SEARCH_STRATEGY['algorithm_params']['roi_variations']['size_factors']:
                     radius = int(min(h, w) * region_cfg['roi_size_ratio'] * size_factor / 2)
                     
-                    # 创建椭圆ROI
+                    # 创建圆形ROI
                     mask = self._create_ellipse_mask((h, w), cand_y, cand_x, radius)
                     roi_pixels = img[mask]
                     

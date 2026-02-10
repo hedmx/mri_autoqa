@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Main Visualization Generator - 12-subplot Quality Report
-English version, following engineering document specifications
-修复版：修复雷达图维度不匹配问题
+Main Visualization Generator - 11-subplot Quality Report
+修复版：合并子图1和子图4区域，移除子图4，共11个子图
 """
 
 import numpy as np
@@ -32,7 +31,7 @@ plt.rcParams.update({
 class MRIQualityVisualizer:
     """
     MRI Quality Report Visualizer
-    Generates 12-subplot report as per engineering document
+    Generates 11-subplot report as per engineering document
     """
     
     def __init__(self, verbose: bool = False):
@@ -47,7 +46,7 @@ class MRIQualityVisualizer:
                            image_data: np.ndarray,
                            output_path: str) -> bool:
         """
-        Create complete 12-subplot visualization
+        Create complete 11-subplot visualization
         
         Args:
             analysis_result: Complete analysis results
@@ -67,19 +66,18 @@ class MRIQualityVisualizer:
             # 2. Add status bar
             self._add_status_bar()
             
-            # 3. Create all 12 subplots
-            self._create_subplot_1()  # Original Image + ROI
+            # 3. Create all 11 subplots (跳过了原子图4)
+            self._create_subplot_1()  # Original Image + ROI (扩大区域)
             self._create_subplot_2()  # SNR Analysis
             self._create_subplot_3()  # CNR Analysis
-            self._create_subplot_4()  # Noise Uniformity
-            self._create_subplot_5()  # Artifact Detection
-            self._create_subplot_6()  # Comprehensive Quality Score
-            self._create_subplot_7()  # Signal Histogram
-            self._create_subplot_8()  # Noise Histogram
-            self._create_subplot_9()  # Confidence Assessment
-            self._create_subplot_10() # Score Components
-            self._create_subplot_11() # Acquisition Info
-            self._create_subplot_12() # Processing Info
+            self._create_subplot_4()  # Artifact Detection (原5)
+            self._create_subplot_5()  # Comprehensive Quality Score (原6)
+            self._create_subplot_6()  # Signal Histogram (原7)
+            self._create_subplot_7()  # Noise Histogram (原8)
+            self._create_subplot_8()  # Confidence Assessment (原9)
+            self._create_subplot_9()  # Score Components (原10)
+            self._create_subplot_10() # Acquisition Info (原11)
+            self._create_subplot_11() # Processing Info (原12)
             
             # 4. Add issue summary if confidence is low
             confidence_score = analysis_result.get('quality_assessment', {}).get(
@@ -88,10 +86,9 @@ class MRIQualityVisualizer:
                 self._add_issue_summary(confidence_score)
             
             # 5. Adjust layout and save
-            #plt.tight_layout(rect=[0, 0.03, 1, 0.99])  # 上移图形
             plt.subplots_adjust(
-                top=0.94,     # 减小顶部边距（原来可能更大）
-                bottom=0.07,  # 稍微减小底部边距
+                top=0.94,
+                bottom=0.07,
                 left=0.06,
                 right=0.97,
                 wspace=0.28,
@@ -117,7 +114,7 @@ class MRIQualityVisualizer:
             return False
     
     def _create_figure_layout(self):
-        """创建图形和子图布局"""
+        """创建图形和子图布局（11个子图）"""
         self.fig = plt.figure(figsize=VisualizationConfig.FIGURE_SIZE)
         
         gs = gridspec.GridSpec(
@@ -127,13 +124,53 @@ class MRIQualityVisualizer:
         )
         
         self.axes = []
-        for i in range(1, 13):
-            row, col = VisualizationConfig.get_subplot_position(i)
-            ax = self.fig.add_subplot(gs[row, col])
-            self.axes.append(ax)
+        
+        # 子图1：跨越两行（第0-1行，第0列）- 扩大显示区域
+        ax1 = self.fig.add_subplot(gs[0:2, 0])
+        self.axes.append(ax1)
+        
+        # 子图2：第0行，第1列
+        ax2 = self.fig.add_subplot(gs[0, 1])
+        self.axes.append(ax2)
+        
+        # 子图3：第0行，第2列
+        ax3 = self.fig.add_subplot(gs[0, 2])
+        self.axes.append(ax3)
+        
+        # 子图4（原5）：第1行，第1列
+        ax4 = self.fig.add_subplot(gs[1, 1])
+        self.axes.append(ax4)
+        
+        # 子图5（原6）：第1行，第2列
+        ax5 = self.fig.add_subplot(gs[1, 2])
+        self.axes.append(ax5)
+        
+        # 子图6（原7）：第2行，第0列
+        ax6 = self.fig.add_subplot(gs[2, 0])
+        self.axes.append(ax6)
+        
+        # 子图7（原8）：第2行，第1列
+        ax7 = self.fig.add_subplot(gs[2, 1])
+        self.axes.append(ax7)
+        
+        # 子图8（原9）：第2行，第2列
+        ax8 = self.fig.add_subplot(gs[2, 2])
+        self.axes.append(ax8)
+        
+        # 子图9（原10）：第3行，第0列
+        ax9 = self.fig.add_subplot(gs[3, 0])
+        self.axes.append(ax9)
+        
+        # 子图10（原11）：第3行，第1列
+        ax10 = self.fig.add_subplot(gs[3, 1])
+        self.axes.append(ax10)
+        
+        # 子图11（原12）：第3行，第2列
+        ax11 = self.fig.add_subplot(gs[3, 2])
+        self.axes.append(ax11)
     
     def _add_status_bar(self):
-        """添加顶部状态栏（工程文件第14页）"""
+        """添加顶部状态栏"""
         result = self.current_result
         config = VisualizationConfig.STATUS_BAR_CONFIG
         
@@ -210,7 +247,7 @@ class MRIQualityVisualizer:
                      color=title_color,
                      weight='bold')
         
-        # 提取问题（简化示例）
+        # 提取问题
         issues = []
         
         # 检查ROI信号强度
@@ -249,6 +286,7 @@ class MRIQualityVisualizer:
                          fontsize=config['fontsize'] - 1,
                          color='#388E3C',
                          style='italic')
+    
     def _get_quality_level(self, score: float) -> str:
         """获取质量等级（与置信度分开）"""
         if score >= 0.90:
@@ -274,18 +312,31 @@ class MRIQualityVisualizer:
             return '#FF7043'  # 深橙 - POOR
         else:
             return '#D32F2F'   # 深红 - UNACCEPTABLE
+    
     # ============================================================================
-    # 子图1：原始图像 + ROI标注（工程文件第12页）
+    # 子图1：原始图像 + ROI标注（扩大区域）
     # ============================================================================
     def _create_subplot_1(self):
-        """Subplot 1: Original Image with ROI Annotation"""
+        """Subplot 1: Original Image with ROI Annotation (扩大区域)"""
         ax = self.axes[0]
         config = VisualizationConfig.SUBPLOT_CONFIGS[1]
         
-        # 显示原始图像
-        if self.current_image is not None:
-            ax.imshow(self.current_image, cmap='gray', aspect='auto')
+        # 清除轴
+        ax.clear()
         
+        # 显示原始图像，保持宽高比
+        if self.current_image is not None:
+            # 获取图像尺寸
+            h, w = self.current_image.shape
+            aspect_ratio = w / h
+            
+            # 显示图像，保持原始宽高比
+            im = ax.imshow(self.current_image, cmap='gray', aspect='equal')
+            
+            # 设置轴限制
+            ax.set_xlim(0, w)
+            ax.set_ylim(h, 0)
+            ax.set_adjustable('datalim')
         # 获取ROI信息
         result = self.current_result
         signal_roi = result.get('roi_info', {}).get('signal', {})
@@ -307,7 +358,7 @@ class MRIQualityVisualizer:
             ellipse = Ellipse((center_x, center_y), width, height,
                             edgecolor=VisualizationConfig.COLOR_SCHEME['roi']['signal'],
                             facecolor='none',
-                            linewidth=config['roi_linewidth'],
+                            linewidth=config['roi_linewidth'] * 1,  # 加粗线条
                             linestyle=line_style,
                             alpha=config['roi_alpha'])
             ax.add_patch(ellipse)
@@ -315,7 +366,7 @@ class MRIQualityVisualizer:
             # 添加标签
             ax.text(center_x, center_y - height/2 - 5, 'Signal ROI',
                    color=VisualizationConfig.COLOR_SCHEME['roi']['signal'],
-                   fontsize=config['anatomy_fontsize'],
+                   fontsize=config['anatomy_fontsize'] + 1,  # 增大字体
                    ha='center',
                    weight='bold')
         
@@ -327,7 +378,7 @@ class MRIQualityVisualizer:
             rect = Rectangle((x1, y1), x2 - x1, y2 - y1,
                            edgecolor=VisualizationConfig.COLOR_SCHEME['roi']['background'],
                            facecolor='none',
-                           linewidth=config['roi_linewidth'],
+                           linewidth=config['roi_linewidth'] * 1,  # 加粗线条
                            alpha=config['roi_alpha'])
             ax.add_patch(rect)
             
@@ -336,15 +387,15 @@ class MRIQualityVisualizer:
             center_y = (y1 + y2) / 2
             ax.text(center_x, center_y - (y2-y1)/2 - 5, 'Background ROI',
                    color=VisualizationConfig.COLOR_SCHEME['roi']['background'],
-                   fontsize=config['anatomy_fontsize'],
+                   fontsize=config['anatomy_fontsize'] + 1,  # 增大字体
                    ha='center',
                    weight='bold')
         
         # 添加解剖部位信息
         anatomy = result.get('acquisition', {}).get('anatomical_region', 'Unknown')
-        ax.text(0.01, -0.06, f'Anatomy: {anatomy.upper()}',
+        ax.text(0.01, -0.04, f'Anatomy: {anatomy.upper()}',
                transform=ax.transAxes,
-               fontsize=config['anatomy_fontsize'],
+               fontsize=config['anatomy_fontsize'] + 1,
                color='white',
                weight='bold',
                bbox=dict(boxstyle="round,pad=0.3", facecolor="black", alpha=0.7))
@@ -352,9 +403,9 @@ class MRIQualityVisualizer:
         # 添加图像尺寸
         if self.current_image is not None:
             h, w = self.current_image.shape
-            ax.text(0.02, 0.02, f'Size: {w} × {h} px',
+            ax.text(0.02, 0.98, f'Size: {w} × {h} px',
                    transform=ax.transAxes,
-                   fontsize=config['anatomy_fontsize'] - 1,
+                   fontsize=config['anatomy_fontsize'],
                    color='white',
                    bbox=dict(boxstyle="round,pad=0.2", facecolor="black", alpha=0.7))
         
@@ -362,7 +413,7 @@ class MRIQualityVisualizer:
         ax.axis('off')
     
     # ============================================================================
-    # 子图2：SNR分析（工程文件第12页）
+    # 子图2：SNR分析
     # ============================================================================
     def _create_subplot_2(self):
         """Subplot 2: SNR Analysis"""
@@ -375,8 +426,8 @@ class MRIQualityVisualizer:
         # 获取SNR值
         snr_raw = snr_results.get('traditional', {}).get('snr', 0)
         snr_corrected = snr_results.get('recommended', {}).get('snr', 0)
-        #snr_db = 20 * np.log10(snr_corrected) if snr_corrected > 0 else -np.inf
-        # 【优先使用rayleigh_correction中的数据】
+        
+        # 优先使用rayleigh_correction中的数据
         rayleigh_correction = snr_results.get('rayleigh_correction', {})
         if rayleigh_correction:
             snr_raw = rayleigh_correction.get('snr_raw', snr_raw)
@@ -388,6 +439,7 @@ class MRIQualityVisualizer:
             improvement_percent = ((snr_corrected - snr_raw) / snr_raw * 100) if snr_raw > 0 else 0
             correction_factor = 1.0
             correction_applied = False
+        
         # 获取评级
         snr_rating = result.get('quality_assessment', {}).get('snr_rating', {}).get('level', 'UNKNOWN')
         
@@ -406,6 +458,7 @@ class MRIQualityVisualizer:
                    f'{val:.1f}',
                    ha='center', va='bottom',
                    fontsize=VisualizationConfig.FONT_CONFIG['annotation_size'])
+            
             # 在原始SNR柱上标注方法
             if i == 0:
                 method_note = "Intelligent Background"
@@ -414,6 +467,7 @@ class MRIQualityVisualizer:
                        ha='center', va='center',
                        fontsize=VisualizationConfig.FONT_CONFIG['annotation_size'] - 2,
                        color='black', alpha=0.7)
+        
         # 添加dB值（如果显示）
         snr_db = 20 * np.log10(snr_corrected) if snr_corrected > 0 else -np.inf
         if config['show_dB'] and not np.isinf(snr_db):
@@ -424,7 +478,7 @@ class MRIQualityVisualizer:
                    fontsize=VisualizationConfig.FONT_CONFIG['annotation_size'] - 1,
                    color='gray')
         
-        # 添加评级（如果显示）
+        # 添加评级
         if config['show_rating']:
             rating_text = f'Rating: {snr_rating}'
             if correction_applied:
@@ -435,22 +489,24 @@ class MRIQualityVisualizer:
                    fontsize=config['rating_fontsize'],
                    color=colors[1],
                    weight='bold')
-        # 【新增】添加校正信息
+        
+        # 添加校正信息
         if correction_applied and improvement_percent > 0:
             info_text = f'Correction factor: {correction_factor:.2f}\nImprovement: +{improvement_percent:.1f}%'
-            ax.text(0.5, -0.25, info_text,
+            ax.text(0.8, -0.15, info_text,
                    transform=ax.transAxes,
                    ha='center',
                    fontsize=VisualizationConfig.FONT_CONFIG['annotation_size'] - 1,
                    color='gray',
                    style='italic')
+        
         ax.set_ylabel('SNR Value')
         ax.set_title(config['title'])
         ax.grid(True, alpha=0.3, linestyle='--')
         ax.set_ylim(0, max(values) * 1.2 if values else 50)
     
     # ============================================================================
-    # 子图3：CNR分析（工程文件第12页）
+    # 子图3：CNR分析
     # ============================================================================
     def _create_subplot_3(self):
         """Subplot 3: CNR Analysis"""
@@ -473,15 +529,15 @@ class MRIQualityVisualizer:
         
         # 创建条形图显示所有组织对的CNR
         pair_names = []
-        display_names_list = []  # 显示名称（修复变量名）
+        display_names_list = []
         cnr_values = []
         colors = []
         
         for pair in tissue_pairs:
             pair_names.append(pair.get('description', pair.get('name', 'Unknown')))
             raw_description = pair.get('description', pair.get('name', 'Unknown'))
-           
-            # 【新增】格式化显示名称 - 分三行
+            
+            # 格式化显示名称 - 分三行
             if ' vs ' in raw_description:
                 parts = raw_description.split(' vs ')
                 if len(parts) == 2:
@@ -496,8 +552,8 @@ class MRIQualityVisualizer:
                     display_name = raw_description
             else:
                 display_name = raw_description
-        
-            display_names_list.append(display_name)  # 使用正确的变量名
+            
+            display_names_list.append(display_name)
             cnr_value = pair.get('cnr_value', 0)
             cnr_values.append(cnr_value)
             
@@ -538,69 +594,12 @@ class MRIQualityVisualizer:
         ax.set_xlim(0, max(cnr_values) * 1.3 if cnr_values else 10)
     
     # ============================================================================
-    # 子图4：噪声均匀性（工程文件第12页）
+    # 子图4：伪影检测（原子图5）
     # ============================================================================
     def _create_subplot_4(self):
-        """Subplot 4: Noise Uniformity Analysis"""
+        """Subplot 4: Artifact Detection (原子图5)"""
         ax = self.axes[3]
         config = VisualizationConfig.SUBPLOT_CONFIGS[4]
-        
-        result = self.current_result
-        noise_uniformity = result.get('quality_assessment', {}).get('noise_uniformity', {})
-        cv = noise_uniformity.get('cv', 0)
-        uniformity_rating = noise_uniformity.get('uniformity_rating', 'UNKNOWN')
-        
-        # 创建箱线图
-        bg_stats = result.get('roi_info', {}).get('background', {}).get('statistics', {})
-        bg_mean = bg_stats.get('mean', 0)
-        bg_std = bg_stats.get('std', 0)
-        
-        # 模拟多个背景区域的噪声分布
-        np.random.seed(42)
-        noise_samples = []
-        for i in range(4):  # 4个角落区域
-            region_noise = np.random.normal(bg_mean, bg_std * (1 + i*0.1), 100)
-            noise_samples.append(region_noise)
-        
-        # 创建箱线图
-        boxplot = ax.boxplot(noise_samples, 
-                            patch_artist=True,
-                            showfliers=config['boxplot_showfliers'])
-        
-        # 设置箱线图颜色
-        for patch in boxplot['boxes']:
-            patch.set_facecolor(VisualizationConfig.COLOR_SCHEME['charts']['secondary'])
-            patch.set_alpha(0.7)
-        
-        # 添加CV值和评级
-        if config['show_cv']:
-            ax.text(0.02, 0.98, f'CV = {cv:.3f}',
-                   transform=ax.transAxes,
-                   fontsize=VisualizationConfig.FONT_CONFIG['annotation_size'],
-                   bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8))
-        
-        if config['show_rating']:
-            ax.text(0.98, 0.98, uniformity_rating,
-                   transform=ax.transAxes,
-                   ha='right',
-                   fontsize=VisualizationConfig.FONT_CONFIG['annotation_size'],
-                   color=VisualizationConfig.get_color_for_cnr_rating(cv*10),  # 缩放CV用于颜色映射
-                   weight='bold',
-                   bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8))
-        
-        ax.set_xlabel('Background Region')
-        ax.set_ylabel('Noise Value')
-        ax.set_title(config['title'])
-        ax.grid(True, alpha=0.3)
-        ax.set_xticklabels(['TL', 'TR', 'BL', 'BR'])  # 左上、右上、左下、右下
-    
-    # ============================================================================
-    # 子图5：伪影检测（工程文件第12-13页）- 修复版
-    # ============================================================================
-    def _create_subplot_5(self):
-        """Subplot 5: Artifact Detection - FIXED VERSION"""
-        ax = self.axes[4]
-        config = VisualizationConfig.SUBPLOT_CONFIGS[5]
         
         # 清除当前轴
         ax.clear()
@@ -618,7 +617,7 @@ class MRIQualityVisualizer:
             'Chemical Shift': quality_assessment.get('artifact_chemical', 0.85)
         }
         
-        # 创建条形图代替雷达图，避免维度问题
+        # 创建条形图
         categories = list(artifact_scores.keys())
         values = list(artifact_scores.values())
         
@@ -646,18 +645,19 @@ class MRIQualityVisualizer:
         ax.grid(True, alpha=0.3)
     
     # ============================================================================
-    # 子图6：综合质量评分（工程文件第13页）- 修复版
+    # 子图5：综合质量评分（原子图6）
     # ============================================================================
-    def _create_subplot_6(self):
-        """Subplot 6: Comprehensive Quality Score - FIXED VERSION"""
-        ax = self.axes[5]
-        config = VisualizationConfig.SUBPLOT_CONFIGS[6]
+    def _create_subplot_5(self):
+        """Subplot 5: Comprehensive Quality Score (原子图6)"""
+        ax = self.axes[4]
+        config = VisualizationConfig.SUBPLOT_CONFIGS[5]
         
         # 清除当前轴
         ax.clear()
         
         result = self.current_result
         quality_scores = result.get('quality_assessment', {}).get('quality_scores', {})
+        
         # 检查质量评分数据是否存在
         if not quality_scores or 'dimensions' not in quality_scores:
             # 如果没有质量评分数据，显示错误信息
@@ -670,7 +670,7 @@ class MRIQualityVisualizer:
 
         # 从质量评分数据中提取维度分数
         dim_data = quality_scores['dimensions']
-        # 定义要显示的维度（使用你定义的5个维度）
+        # 定义要显示的维度
         dimensions = ['SNR Quality', 'CNR Quality', 'Noise Quality', 'Artifact Free', 'Image Integrity']
         dimension_keys = ['snr_quality', 'cnr_quality', 'noise_quality', 'artifact_free', 'image_integrity']
     
@@ -683,7 +683,7 @@ class MRIQualityVisualizer:
         # 创建条形图
         x_pos = np.arange(len(dimensions))
     
-        # 根据分数选择颜色（可以使用现有的颜色映射）
+        # 根据分数选择颜色
         colors = [VisualizationConfig.get_color_for_quality_score(score) for score in scores]
     
         bars = ax.bar(x_pos, scores, color=colors, alpha=0.7)
@@ -718,12 +718,12 @@ class MRIQualityVisualizer:
         ax.grid(True, alpha=0.3, axis='y')
     
     # ============================================================================
-    # 子图7：信号直方图（工程文件第13页）
+    # 子图6：信号直方图（原子图7，现在显示CV值）
     # ============================================================================
-    def _create_subplot_7(self):
-        """Subplot 7: Signal ROI Histogram"""
-        ax = self.axes[6]
-        config = VisualizationConfig.SUBPLOT_CONFIGS[7]
+    def _create_subplot_6(self):
+        """Subplot 6: Signal ROI Histogram（现在显示CV值）"""
+        ax = self.axes[5]
+        config = VisualizationConfig.SUBPLOT_CONFIGS[6]
         
         result = self.current_result
         signal_stats = result.get('roi_info', {}).get('signal', {}).get('statistics', {})
@@ -731,6 +731,9 @@ class MRIQualityVisualizer:
         mean_val = signal_stats.get('mean', 100)
         std_val = signal_stats.get('std', 15)
         pixel_count = signal_stats.get('pixel_count', 1000)
+        
+        # 计算CV值
+        cv_val = (std_val / mean_val) if mean_val > 0 else 0
         
         # 生成直方图数据
         np.random.seed(42)
@@ -753,10 +756,11 @@ class MRIQualityVisualizer:
             ax.plot(x, y, color=config['norm_fit_color'],
                    linewidth=2, alpha=config['norm_fit_alpha'])
         
-        # 添加统计信息
+        # 添加统计信息（包括CV值）
         if config['show_statistics']:
             info_text = (f'Mean: {mean_val:.1f}\n'
                         f'Std: {std_val:.1f}\n'
+                        f'CV: {cv_val:.3f}\n'  # 新增CV值
                         f'N: {pixel_count}')
             
             ax.text(0.98, 0.98, info_text,
@@ -771,12 +775,12 @@ class MRIQualityVisualizer:
         ax.grid(True, alpha=0.3)
     
     # ============================================================================
-    # 子图8：噪声直方图（工程文件第13页）
+    # 子图7：噪声直方图（原子图8，现在显示CV值）
     # ============================================================================
-    def _create_subplot_8(self):
-        """Subplot 8: Background Noise Histogram"""
-        ax = self.axes[7]
-        config = VisualizationConfig.SUBPLOT_CONFIGS[8]
+    def _create_subplot_7(self):
+        """Subplot 7: Background Noise Histogram（现在显示CV值）"""
+        ax = self.axes[6]
+        config = VisualizationConfig.SUBPLOT_CONFIGS[7]
         
         result = self.current_result
         noise_stats = result.get('roi_info', {}).get('background', {}).get('statistics', {})
@@ -784,6 +788,9 @@ class MRIQualityVisualizer:
         mean_val = noise_stats.get('mean', 2)
         std_val = noise_stats.get('std', 0.5)
         pixel_count = noise_stats.get('pixel_count', 500)
+        
+        # 计算CV值
+        cv_val = (std_val / mean_val) if mean_val > 0 else 0
         
         # 生成噪声数据
         np.random.seed(42)
@@ -818,9 +825,10 @@ class MRIQualityVisualizer:
                    fontsize=VisualizationConfig.FONT_CONFIG['annotation_size'] - 1,
                    color=config['reference_line_color'])
         
-        # 添加噪声统计
+        # 添加噪声统计（包括CV值）
         info_text = (f'Noise Mean: {mean_val:.2f}\n'
-                    f'Noise Std: {std_val:.2f}')
+                    f'Noise Std: {std_val:.2f}\n'
+                    f'CV: {cv_val:.3f}')  # 新增CV值
         
         ax.text(0.98, 0.98, info_text,
                transform=ax.transAxes,
@@ -834,12 +842,12 @@ class MRIQualityVisualizer:
         ax.grid(True, alpha=0.3)
     
     # ============================================================================
-    # 子图9：置信度评估（工程文件第13页）
+    # 子图8：置信度评估（原子图9）
     # ============================================================================
-    def _create_subplot_9(self):
-        """Subplot 9: Confidence Assessment"""
-        ax = self.axes[8]
-        config = VisualizationConfig.SUBPLOT_CONFIGS[9]
+    def _create_subplot_8(self):
+        """Subplot 8: Confidence Assessment (原子图9)"""
+        ax = self.axes[7]
+        config = VisualizationConfig.SUBPLOT_CONFIGS[8]
         
         result = self.current_result
         confidence_scores = result.get('quality_assessment', {}).get('confidence_scores', {})
@@ -894,12 +902,12 @@ class MRIQualityVisualizer:
         ax.grid(True, alpha=0.3, axis='y')
     
     # ============================================================================
-    # 子图10：评分组件（工程文件第13页）
+    # 子图9：评分组件（原子图10）
     # ============================================================================
-    def _create_subplot_10(self):
-        """Subplot 10: Score Components Breakdown"""
-        ax = self.axes[9]
-        config = VisualizationConfig.SUBPLOT_CONFIGS[10]
+    def _create_subplot_9(self):
+        """Subplot 9: Score Components Breakdown (原子图10)"""
+        ax = self.axes[8]
+        config = VisualizationConfig.SUBPLOT_CONFIGS[9]
         
         # 示例数据 - ROI质量评分组件
         components = ['Intensity', 'Uniformity', 'Edge Distance', 'Anatomy']
@@ -936,12 +944,12 @@ class MRIQualityVisualizer:
         ax.grid(True, alpha=0.3, axis='y')
     
     # ============================================================================
-    # 子图11：采集信息（工程文件第13页）
+    # 子图10：采集信息（原子图11）
     # ============================================================================
-    def _create_subplot_11(self):
-        """Subplot 11: Acquisition Information Table"""
-        ax = self.axes[10]
-        config = VisualizationConfig.SUBPLOT_CONFIGS[11]
+    def _create_subplot_10(self):
+        """Subplot 10: Acquisition Information Table (原子图11)"""
+        ax = self.axes[9]
+        config = VisualizationConfig.SUBPLOT_CONFIGS[10]
         
         result = self.current_result
         acquisition = result.get('acquisition', {})
@@ -986,12 +994,12 @@ class MRIQualityVisualizer:
         ax.set_title(config['title'], pad=20)
     
     # ============================================================================
-    # 子图12：处理信息（工程文件第13-14页）
+    # 子图11：处理信息（原子图12）
     # ============================================================================
-    def _create_subplot_12(self):
-        """Subplot 12: Processing Information"""
-        ax = self.axes[11]
-        config = VisualizationConfig.SUBPLOT_CONFIGS[12]
+    def _create_subplot_11(self):
+        """Subplot 11: Processing Information (原子图12)"""
+        ax = self.axes[10]
+        config = VisualizationConfig.SUBPLOT_CONFIGS[11]
         
         result = self.current_result
         analysis_info = result.get('analysis_info', {})
